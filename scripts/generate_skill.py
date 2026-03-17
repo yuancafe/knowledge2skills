@@ -206,7 +206,7 @@ def detect_workflows(sections: list, full_text: str) -> list:
 
 
 def generate_skill_md(skill_name: str, metadata: dict, domain_info: dict,
-                      ref_files: list, workflows: list, sections: list) -> str:
+                      ref_files: list, workflows: list, sections: list, has_graph: bool = False) -> str:
     """Generate the SKILL.md content."""
     title = title_from_name(skill_name)
     book_title = metadata.get("title", "") or title
@@ -224,6 +224,9 @@ def generate_skill_md(skill_name: str, metadata: dict, domain_info: dict,
         "including analysis, exercises, frameworks, and methodologies described within.",
         f"Triggers: {domain}, {book_title}, extract methodology, reference manual, {domain} analysis."
     ]
+    if has_graph:
+        desc_parts.append("Features integrated Graph RAG for relational reasoning.")
+    
     description = " ".join(p for p in desc_parts if p)
 
     lines = [
@@ -239,6 +242,20 @@ def generate_skill_md(skill_name: str, metadata: dict, domain_info: dict,
         f"This skill encapsulates knowledge from **{book_title}**" + (f" by {author}" if author else "") + ".",
         f"Domain: **{domain.capitalize()}** | Freedom level: **{freedom}** | Source pages: **{total_pages}**",
         "",
+    ]
+
+    if has_graph:
+        lines.extend([
+            "## Graph RAG Features",
+            "",
+            "This skill is enhanced with a **Knowledge Graph Database**. It allows for high-precision relational reasoning, cause-and-effect analysis, and global thematic summaries.",
+            "",
+            "1. **Graph Summary**: See `references/graph_summary.md` for a high-level overview of entities and relationships.",
+            "2. **Relational Queries**: Use the included query engine to answer complex 'how' and 'why' questions that span multiple chapters.",
+            "",
+        ])
+
+    lines.extend([
         "## Multilingual & Interaction Guidance",
         "",
         "This skill is built from multilingual sources (which may include Chinese, English, Italian, etc.).",
@@ -249,14 +266,22 @@ def generate_skill_md(skill_name: str, metadata: dict, domain_info: dict,
         "## Sub-agent Guidance",
         "",
         "To ensure contextual preciseness and reliability:",
-        "1. **Surgical Retrieval**: Use `grep_search` on the `references/` folder to find relevant sections before answering. Do not rely on your general knowledge if the book provides a specific framework.",
+    ])
+
+    if has_graph:
+        lines.append("1. **Graph-First Logic**: For complex thematic or relational questions, prioritize using `scripts/query_graph.py` to query the bundled database in `references/graph_db/`.")
+        lines.append("2. **Surgical Retrieval**: Use `grep_search` on the `references/` folder to find specific sections for factual verification.")
+    else:
+        lines.append("1. **Surgical Retrieval**: Use `grep_search` on the `references/` folder to find relevant sections before answering. Do not rely on your general knowledge.")
+
+    lines.extend([
         "2. **Evidence-Based**: Always cite the reference file (e.g., `ref_01_intro.md`) used for your response.",
         f"3. **Freedom Enforcement**: This is a **{freedom}** freedom skill. " + 
         ("Follow formulas and rules precisely via Python scripts." if freedom == "low" else 
          "Follow patterns but adapt to user context." if freedom == "medium" else 
          "Use frameworks as guides for open-ended exploration."),
         "",
-    ]
+    ])
 
     # Workflow section
     if workflows:
@@ -311,7 +336,7 @@ def generate_skill_md(skill_name: str, metadata: dict, domain_info: dict,
     return "\n".join(lines)
 
 
-def generate_skill(extracted_data: dict, skill_name: str, output_dir: str) -> Path:
+def generate_skill(extracted_data: dict, skill_name: str, output_dir: str, has_graph: bool = False) -> Path:
     """
     Main generation function.
     Creates a complete skill directory from extracted knowledge data.
@@ -344,17 +369,32 @@ def generate_skill(extracted_data: dict, skill_name: str, output_dir: str) -> Pa
     print(f"Generated {len(ref_files)} reference files", file=sys.stderr)
 
     # Generate SKILL.md
-    skill_md = generate_skill_md(skill_name, metadata, domain_info, ref_files, workflows, sections)
+    skill_md = generate_skill_md(skill_name, metadata, domain_info, ref_files, workflows, sections, has_graph=has_graph)
     (skill_dir / "SKILL.md").write_text(skill_md, encoding="utf-8")
     print(f"Generated SKILL.md", file=sys.stderr)
 
-    # Write metadata JSON for debugging/iteration
+    # Copy scripts
+    scripts_dir = skill_dir / "scripts"
+    scripts_dir.mkdir(exist_ok=True)
+    
+    # If graph enabled, copy the query engine to the skill
+    if has_graph:
+        src_query_script = Path(__file__).parent / "query_graph.py"
+        if src_query_script.exists():
+            import shutil
+            shutil.copy(str(src_query_script), str(scripts_dir / "query_graph.py"))
+            print(f"Bundled Graph Query Engine to {scripts_dir / 'query_graph.py'}", file=sys.stderr)
+
+    # Write metadata JSON
     meta_output = {
         "source_pdf": metadata,
         "domain_info": domain_info,
         "workflows": workflows,
         "reference_files": ref_files,
         "sections_count": len(sections),
+        "features": {
+            "graph_enhanced": has_graph
+        }
     }
     (skill_dir / "skill_meta.json").write_text(
         json.dumps(meta_output, ensure_ascii=False, indent=2), encoding="utf-8"

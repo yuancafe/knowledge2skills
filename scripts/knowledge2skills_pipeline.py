@@ -184,7 +184,7 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
 
     # Step 5: Generate & Install
     print(f"\n[5/5] Generating skill package...")
-    skill_dir = generate_skill(extracted, skill_name, str(work_dir))
+    skill_dir = generate_skill(extracted, skill_name, str(work_dir), has_graph=use_graph)
     
     # Bundle extras
     if graph_db_dir and graph_db_dir.exists():
