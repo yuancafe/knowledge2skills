@@ -6,6 +6,9 @@
 [![RAG: LightRAG](https://img.shields.io/badge/RAG-LightRAG-orange)](https://github.com/HKUDS/LightRAG)
 
 ---
+Author: Leo Yuan Tsao
+
+English | [中文](README_CN.md)
 
 ## 🌟 Overview
 
