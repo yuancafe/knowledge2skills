@@ -1,0 +1,65 @@
+{
+  "literature": {
+    "types": [
+      "Character",
+      "Location",
+      "Event",
+      "Concept",
+      "Literary_Work",
+      "Symbol",
+      "Creature",
+      "Organization",
+      "Inferno",
+      "The_Divine_Comedy"
+    ],
+    "learned_types": [
+      {
+        "name": "Inferno",
+        "added_at": "2026-03-17",
+        "frequency": 2,
+        "original_forms": [
+          "Inferno",
+          "Inferno"
+        ]
+      },
+      {
+        "name": "The_Divine_Comedy",
+        "added_at": "2026-03-17",
+        "frequency": 3,
+        "original_forms": [
+          "The Divine Comedy",
+          "The Divine Comedy",
+          "The Divine Comedy"
+        ]
+      }
+    ],
+    "usage_count": {
+      "Divine_Comedy": 1,
+      "Inferno": 2,
+      "Purgatorio": 1,
+      "Paradiso": 1,
+      "The_Divine_Comedy": 3,
+      "The_Epistle_To_Can_Grande": 1,
+      "Part_1": 1,
+      "Chapter_1": 1,
+      "The_Epistle_To_Can_Grande_(1319)": 1,
+      "Book_Work": 1
+    }
+  },
+  "medicine": {
+    "types": [
+      "Disease",
+      "Symptom",
+      "Treatment",
+      "Drug",
+      "Anatomy",
+      "Procedure",
+      "Test",
+      "Pathogen",
+      "Gene",
+      "Biomarker"
+    ],
+    "learned_types": [],
+    "usage_count": {}
+  }
+}
