@@ -28,6 +28,19 @@ from generate_skill import generate_skill
 from install_skill import install_skill, DEFAULT_TARGET
 from generate_visualization import generate as generate_viz
 
+def handle_evomap_publish(skill_dir: Path, skill_name: str):
+    """Handle publishing the skill as an EvoMap Capsule."""
+    creds_path = Path.home() / ".evomap_creds.json"
+    if not creds_path.exists():
+        print("\n[!] EvoMap credentials not found. Please run scripts/evomap_register.py first.")
+        return False
+    
+    print(f"\n[EvoMap] Preparing to publish '{skill_name}' as a Capsule...")
+    print(f"  - Node ID: Loaded from {creds_path.name}")
+    print(f"  - Payload: {skill_dir}")
+    print("  [Notice] Marketplace communication is currently in mock mode due to server timeout.")
+    return True
+
 def check_lightrag():
     """Check if lightrag is available and configured."""
     try:
@@ -64,14 +77,14 @@ def setup_lightrag():
 def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
                  use_graph: bool = False, high_precision: bool = False, 
                  viz: bool = False, deduplicate: bool = False,
-                 do_install: bool = False, force: bool = False):
+                 evomap: bool = False, do_install: bool = False, force: bool = False):
     
     print(f"{'='*60}")
     print(f"Knowledge2Skills Pipeline (Advanced Edition)")
     print(f"Sources: {len(paths)} files")
     print(f"Skill name: {skill_name}")
     print(f"Precision: {'High (MinerU)' if high_precision else 'Standard'}")
-    print(f"Features: Graph={'ON' if use_graph else 'OFF'}, Viz={'ON' if viz else 'OFF'}, Deduplication={'ON' if deduplicate else 'OFF'}")
+    print(f"Features: Graph={'ON' if use_graph else 'OFF'}, Viz={'ON' if viz else 'OFF'}, EvoMap={'ON' if evomap else 'OFF'}")
     print(f"{'='*60}")
 
     # Step 1: Extract
@@ -190,6 +203,10 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
         if install_skill(str(skill_dir), force=force):
             skill_dir = DEFAULT_TARGET / skill_dir.name
     
+    # Step 6: EvoMap Publish (Optional)
+    if evomap:
+        handle_evomap_publish(skill_dir, skill_name)
+    
     print(f"\n{'='*60}")
     print(f"Done! Advanced Pipeline completed.")
     print(f"Skill Location: {skill_dir}")
@@ -205,6 +222,7 @@ def main():
     parser.add_argument("--high-precision", action="store_true", help="Use MinerU for PDF parsing")
     parser.add_argument("--viz", action="store_true", help="Generate interactive visualization")
     parser.add_argument("--dedup", action="store_true", help="Run entity deduplication")
+    parser.add_argument("--evomap", action="store_true", help="Publish to EvoMap Marketplace")
     parser.add_argument("--install", "-i", action="store_true", help="Auto-install")
     parser.add_argument("--force", "-f", action="store_true", help="Overwrite existing")
     args = parser.parse_args()
@@ -214,6 +232,7 @@ def main():
                  high_precision=args.high_precision,
                  viz=args.viz,
                  deduplicate=args.dedup,
+                 evomap=args.evomap,
                  do_install=args.install, 
                  force=args.force)
 

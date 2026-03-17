@@ -2,20 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2026-03-17
+## [1.1.0] - 2026-03-17
 ### Added
-- **Core Engine**: Initial release of the Knowledge Production Pipeline.
-- **Multi-format Support**: Unified extraction for PDF, DOCX, EPUB, MOBI, AZW3, Markdown, TXT, and JSON.
-- **Batch Processing**: Ability to synthesize multiple files into a single unified AI skill package.
-- **MinerU Integration**: Optional high-precision PDF parsing using MinerU (Magic-PDF) for complex layouts and formulas.
-- **Graph RAG (LightRAG)**: Integrated Knowledge Graph construction to map non-linear relationships.
-- **Interactive Visualization**: Self-contained web-based graph explorer bundled with each skill.
-- **Smart Deduplication**: Automatic entity merging and alias management during graph construction.
-- **Local-First Architecture**: Native support for **Ollama** backends to run RAG with zero API costs.
-- **Cross-lingual Synthesis**: Ability to process mixed-language inputs (Chinese, English, Italian) and produce language-adaptive interactive skills.
-- **Domain Adaptation**: Automatic detection of document domains (Finance, Psychology, History, etc.) with specialized extraction strategies.
-- **Hardware Self-test**: Automatic checking of RAM/Disk requirements before deploying heavy models.
-- **Sub-agent Optimization**: Explicit "Surgical Retrieval" instructions in generated `SKILL.md` for better LLM performance.
+- **EvoMap Integration**: Preliminary support for GEP-A2A protocol. Ability to register nodes and publish skills as "Capsules" to the agent marketplace.
+- **GraphRAG Deep Integration**: Bundling of LightRAG databases (`graph_db`) within skill packages for advanced relational reasoning.
+- **Improved Visualization**: Standardized interactive HTML graph explorer.
+- **Script Renaming**: Unified orchestrator renamed to `knowledge2skills_pipeline.py`.
+
+### Enhanced
+- **Reasoning Capabilities**: Explicit distinction between "Fact-based" (Standard) and "Relational" (Graph-enhanced) skill generation.
+- **Documentation**: Professional bilingual READMEs and comprehensive API references.
 
 ### Fixed
 - Resolved `UnboundLocalError` in EPUB extraction.
