@@ -27,6 +27,7 @@ from extract_content import process_files, load_config, save_config
 from generate_skill import generate_skill
 from install_skill import install_skill, DEFAULT_TARGET
 from generate_visualization import generate as generate_viz
+from semantic_engineering import SemanticEngineer
 
 def handle_evomap_publish(skill_dir: Path, skill_name: str):
     """Handle publishing the skill as an EvoMap Capsule."""
@@ -77,6 +78,7 @@ def setup_lightrag():
 def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
                  use_graph: bool = False, high_precision: bool = False, 
                  viz: bool = False, deduplicate: bool = False,
+                 semantic: bool = False,
                  evomap: bool = False, do_install: bool = False, force: bool = False):
     
     print(f"{'='*60}")
@@ -84,7 +86,7 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
     print(f"Sources: {len(paths)} files")
     print(f"Skill name: {skill_name}")
     print(f"Precision: {'High (MinerU)' if high_precision else 'Standard'}")
-    print(f"Features: Graph={'ON' if use_graph else 'OFF'}, Viz={'ON' if viz else 'OFF'}, EvoMap={'ON' if evomap else 'OFF'}")
+    print(f"Features: Graph={'ON' if use_graph else 'OFF'}, Semantic={'ON' if semantic else 'OFF'}, Viz={'ON' if viz else 'OFF'}")
     print(f"{'='*60}")
 
     # Step 1: Extract
@@ -98,7 +100,14 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
     work_dir.mkdir(parents=True, exist_ok=True)
     extracted = process_files(paths, high_precision=high_precision, work_dir=work_dir)
     
-    # Step 2: Graph Enrichment (Optional)
+    # Step 2: Semantic Engineering (Optional)
+    if semantic:
+        print(f"\n[2/6] Performing Semantic Engineering...")
+        engineer = SemanticEngineer()
+        extracted["sections"] = engineer.plan_skus(extracted["sections"])
+        print("  Semantic density analyzed and SKU extraction planned.")
+    
+    # Step 3: Graph Enrichment (Optional)
     graph_summary = None
     graph_db_dir = None
     if use_graph:
@@ -126,7 +135,7 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
                     if api_key: os.environ["OPENAI_API_KEY"] = api_key
             
             if model_type == "ollama" or os.environ.get("OPENAI_API_KEY"):
-                print(f"\n[2/5] Building Knowledge Graph (Backend: {model_type})...")
+                print(f"\n[3/6] Building Knowledge Graph (Backend: {model_type})...")
                 import asyncio
                 from lightrag_graph import build_graph
                 from domain_detector import DomainDetector
@@ -159,9 +168,9 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
                     ))
                     print("  Graph built successfully.")
                     
-                    # Step 3: Deduplication (Optional)
+                    # Step 4: Deduplication (Optional)
                     if deduplicate:
-                        print("\n[3/5] Running entity deduplication...")
+                        print("\n[4/6] Running entity deduplication...")
                         try:
                             from entity_deduplicator import EntityDeduplicator
                             dedup = EntityDeduplicator(str(graph_db_dir))
@@ -170,9 +179,9 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
                         except Exception as e:
                             print(f"  Deduplication failed: {e}")
                     
-                    # Step 4: Visualization (Optional)
+                    # Step 5: Visualization (Optional)
                     if viz:
-                        print("\n[4/5] Generating interactive visualization...")
+                        print("\n[5/6] Generating interactive visualization...")
                         viz_output = work_dir / "visualization"
                         generate_viz(str(graph_db_dir), str(viz_output), title=f"{skill_name} Knowledge Graph")
                         print(f"  Visualization generated in {viz_output}")
@@ -182,8 +191,8 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
             else:
                 print("  Configuration incomplete. Skipping graph.")
 
-    # Step 5: Generate & Install
-    print(f"\n[5/5] Generating skill package...")
+    # Step 6: Generate & Install
+    print(f"\n[6/6] Generating skill package...")
     skill_dir = generate_skill(extracted, skill_name, str(work_dir), has_graph=use_graph)
     
     # Bundle extras
@@ -203,7 +212,7 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
         if install_skill(str(skill_dir), force=force):
             skill_dir = DEFAULT_TARGET / skill_dir.name
     
-    # Step 6: EvoMap Publish (Optional)
+    # Step 7: EvoMap Publish (Optional)
     if evomap:
         handle_evomap_publish(skill_dir, skill_name)
     
@@ -219,6 +228,7 @@ def main():
     parser.add_argument("files", nargs="+", help="Files to process")
     parser.add_argument("--name", "-n", required=True, help="Skill name")
     parser.add_argument("--graph", "-g", action="store_true", help="Enable LightRAG graph enrichment")
+    parser.add_argument("--semantic", "-s", action="store_true", help="Enable Semantic Engineering (density & SKU planning)")
     parser.add_argument("--high-precision", action="store_true", help="Use MinerU for PDF parsing")
     parser.add_argument("--viz", action="store_true", help="Generate interactive visualization")
     parser.add_argument("--dedup", action="store_true", help="Run entity deduplication")
@@ -232,6 +242,7 @@ def main():
                  high_precision=args.high_precision,
                  viz=args.viz,
                  deduplicate=args.dedup,
+                 semantic=args.semantic,
                  evomap=args.evomap,
                  do_install=args.install, 
                  force=args.force)

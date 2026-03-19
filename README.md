@@ -22,6 +22,7 @@ Unlike traditional RAG systems that simply retrieve chunks, this pipeline focuse
 
 - **🔍 Superior Parsing (MinerU)**: Optional high-precision extraction for complex PDF layouts, mathematical formulas, and scientific tables.
 - **🧠 Graph-Enhanced (LightRAG)**: Builds Knowledge Graphs to map non-linear relationships and systemic feedback loops.
+- **🧬 Semantic Engineering**: Advanced NLP scoring for **Logic, Entity, and Structural Density**. Identifies high-value "mining zones" for precise knowledge unit (SKU) extraction.
 - **⚡ Hybrid Retrieval**: Combines Graph RAG, Vector Search, and Full-text Search for a multi-dimensional understanding of your documents.
 - **📊 Interactive Visualization**: Generates a self-contained, web-based graph explorer bundled within each skill package.
 - **💻 Local-First (Ollama)**: Native support for Ollama. Build and run your knowledge base locally with zero API costs.
@@ -53,6 +54,7 @@ python3 scripts/knowledge2skills_pipeline.py <file1> <file2> --name <skill-name>
 | Flag | Description |
 | :--- | :--- |
 | `--graph` | Enable LightRAG Knowledge Graph construction. |
+| `--semantic` | Enable **Semantic Engineering** (Density scoring & SKU planning). |
 | `--viz` | Generate an interactive HTML visualization. |
 | `--dedup` | Run smart entity deduplication/merging. |
 | `--high-precision`| Use **MinerU** for complex PDF parsing. |
@@ -64,6 +66,7 @@ python3 scripts/knowledge2skills_pipeline.py <file1> <file2> --name <skill-name>
 python3 scripts/knowledge2skills_pipeline.py vol1.epub vol2.pdf notes.md \
     --name history-expert \
     --graph \
+    --semantic \
     --viz \
     --dedup \
     --high-precision \

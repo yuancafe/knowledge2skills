@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-03-20
+### Added
+- **Semantic Engineering Module**: New `scripts/semantic_engineering.py` for advanced knowledge density analysis.
+- **SKU (Standardized Knowledge Unit) System**: Transitioned from simple text segmentation to structured knowledge decomposition.
+- **Semantic Density Scoring**: Automatically identifies "mining zones" in documents based on logic, entity, and structural density.
+- **Enhanced SKILL.md**: Generated skills now include semantic density highlights and a summary of extracted knowledge units.
+
+---
+
 ## [1.2.0] - 2026-03-17
 ### Added
 - **Graph RAG Loop Closure**: Bundles `scripts/query_graph.py` directly into generated skills to enable executable relational reasoning.

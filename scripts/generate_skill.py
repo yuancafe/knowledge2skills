@@ -90,6 +90,7 @@ def generate_reference_files(segments: list, refs_dir: Path) -> list:
             "filename": filename,
             "title": title,
             "sections": [s.get("heading", "") for s in seg["sections"] if s.get("heading")],
+            "semantic_analysis": seg["sections"][0].get("semantic_analysis", {}) if seg["sections"] else {}
         })
 
     return ref_files
@@ -305,14 +306,30 @@ def generate_skill_md(skill_name: str, metadata: dict, domain_info: dict,
 
     # Reference files
     if ref_files:
-        lines.append("## Reference Files")
+        lines.append("## Knowledge Base & Reference Files")
         lines.append("")
-        lines.append("Source material is segmented into reference files for dynamic context loading.")
-        lines.append("Load only the relevant file based on the current task.")
+        lines.append("Source material is segmented for dynamic context loading. Each file contains specific thematic knowledge.")
         lines.append("")
         for rf in ref_files:
             section_list = ", ".join(rf["sections"][:5]) if rf["sections"] else "General content"
-            lines.append(f"- **[{rf['title']}](references/{rf['filename']})**: {section_list}")
+            # Show semantic density if available
+            density_str = ""
+            if "semantic_analysis" in rf:
+                score = rf["semantic_analysis"].get("total", 0)
+                density_str = f" [Density: {score}/100]"
+            
+            lines.append(f"- **[{rf['title']}](references/{rf['filename']})**: {section_list}{density_str}")
+        lines.append("")
+
+    # Knowledge Units (SKU) placeholder or generated
+    if any("skus" in rf for rf in ref_files):
+        lines.append("## Standardized Knowledge Units (SKUs)")
+        lines.append("")
+        lines.append("These units represent deterministic rules, formulas, and procedures extracted from the source.")
+        lines.append("")
+        for rf in ref_files:
+            for sku in rf.get("skus", []):
+                lines.append(f"- **{sku['name']}** ({sku['logic_type']}): {sku['trigger']}")
         lines.append("")
 
     # Usage guidance
