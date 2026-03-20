@@ -138,15 +138,23 @@ def run_pipeline(paths: list, skill_name: str, output_dir: str = None,
                 print(f"\n[3/6] Building Knowledge Graph (Backend: {model_type})...")
                 import asyncio
                 from lightrag_graph import build_graph
-                from domain_detector import DomainDetector
                 from entity_type_learner import EntityTypeLearner
                 
                 graph_db_dir = work_dir / "graph_storage"
                 
                 # Dynamic Entity Type Selection
                 try:
-                    detector = DomainDetector()
-                    domain_res = detector.detect_domain(extracted["full_text"][:10000])
+                    from domain_detector import detect_domain as detect_domain_async
+
+                    domain_res = asyncio.run(
+                        detect_domain_async(
+                            extracted["full_text"][:10000],
+                            llm_model=os.environ.get("LIGHTRAG_LLM_MODEL", "gpt-4o-mini"),
+                            api_key=os.environ.get("OPENAI_API_KEY"),
+                            base_url=os.environ.get("OPENAI_API_BASE")
+                            or os.environ.get("OPENAI_BASE_URL"),
+                        )
+                    )
                     domain = domain_res.get("domain", "general")
                     print(f"  Detected Graph Domain: {domain}")
                     

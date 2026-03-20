@@ -1,123 +1,136 @@
-# 🚀 knowledge2skills (aka docs2skills)
-**The Industrial-Grade Knowledge Production Pipeline for AI Agents.**
+# knowledge2skills (aka docs2skills)
+Industrial-grade knowledge production for AI agents.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![RAG: LightRAG](https://img.shields.io/badge/RAG-LightRAG-orange)](https://github.com/HKUDS/LightRAG)
 
----
 Author: Leo Yuan Tsao
+
+Version: `1.40`
+Updated: `2026-03-21`
 
 English | [中文](README_CN.md)
 
-## 🌟 Overview
+See also: [CHANGELOG](CHANGELOG.md) | [中文变更记录](CHANGELOG_CN.md)
 
-**knowledge2skills** is an advanced evolution of knowledge production, designed to convert unstructured human knowledge (Books, Papers, Manuals, Notes) into **structured, executable AI Skill packages**. 
+## Overview
 
-Unlike traditional RAG systems that simply retrieve chunks, this pipeline focuses on **Knowledge Synthesis**: extracting core methodologies, systemic logic, and hierarchical workflows to build a self-contained "Expert Brain" for your AI agents.
+`knowledge2skills` converts books, papers, notes, manuals, and mixed-format source bundles into structured, executable AI skills.
 
----
+It is designed for:
+- multi-file synthesis
+- Graph RAG with bundled graph databases
+- OpenAI-compatible model providers
+- multilingual corpora
+- downstream agent use via generated `SKILL.md`
 
-## 🔥 Key Features
+## What Changed In 1.40
 
-- **🔍 Superior Parsing (MinerU)**: Optional high-precision extraction for complex PDF layouts, mathematical formulas, and scientific tables.
-- **🧠 Graph-Enhanced (LightRAG)**: Builds Knowledge Graphs to map non-linear relationships and systemic feedback loops.
-- **🧬 Semantic Engineering**: Advanced NLP scoring for **Logic, Entity, and Structural Density**. Identifies high-value "mining zones" for precise knowledge unit (SKU) extraction.
-- **⚡ Hybrid Retrieval**: Combines Graph RAG, Vector Search, and Full-text Search for a multi-dimensional understanding of your documents.
-- **📊 Interactive Visualization**: Generates a self-contained, web-based graph explorer bundled within each skill package.
-- **💻 Local-First (Ollama)**: Native support for Ollama. Build and run your knowledge base locally with zero API costs.
-- **🌍 Cross-lingual**: Processes mixed-language inputs (Chinese, English, Italian, etc.) and produces language-adaptive skills.
-- **🤖 Sub-agent Optimized**: Automatically generates `SKILL.md` with explicit instructions for "Surgical Retrieval" and "Evidence-based" reasoning.
-- **📦 Multi-format & Batch**: Processes PDF, DOCX, EPUB, MOBI, AZW3, MD, TXT, and JSON in batches.
+Version `1.40` is the March 21 stabilization release driven by a full end-to-end production run on a difficult historical corpus.
 
----
+It specifically hardens the workflow in the places that failed in real use:
+- fixed `.mobi` and `.azw3` extraction so extracted content is read from the unpacked file instead of treating a temporary path as content
+- added standalone image and map ingestion so `.jpg`, `.png`, `.jpeg`, and `.webp` files can become queryable references
+- fixed async domain detection wiring inside the pipeline
+- added OpenAI-compatible LightRAG support for custom `base_url`, custom chat model, and custom embedding model
+- fixed graph query embedding-dimension handling for non-OpenAI embedding providers
+- added historical-domain prompt hardening for graph extraction
+- updated visualization heuristics so historical graphs are not classified with literary-only types
+- made local MinerU timeout configurable instead of failing after an unrealistically short hardcoded timeout
+- made skill installation safer by restoring the previous skill if staged install fails
 
-## 🛠️ Usage Guide
+## Key Features
 
-### 1. Installation
+- Multi-format extraction: PDF, MD, TXT, DOCX, EPUB, MOBI, AZW3, JSON, and standalone images
+- Graph-enhanced synthesis via LightRAG
+- Semantic engineering for logic, entity, and structure density
+- Interactive graph visualization bundled into each generated skill
+- OpenAI-compatible provider support via `OPENAI_API_BASE` or `OPENAI_BASE_URL`
+- Cross-lingual processing for mixed Chinese / English / other corpora
+- Generated skill packaging with bundled graph DB and query script
+
+## Installation
+
 ```bash
-# Clone the repository
 git clone https://github.com/yuancafe/knowledge2skills.git
 cd knowledge2skills
-
-# Install core dependencies
-pip install lightrag-hku pdfplumber pypdf python-docx ebooklib beautifulsoup4 mobi psutil
+pip install lightrag-hku pdfplumber pypdf python-docx ebooklib beautifulsoup4 mobi psutil requests pillow
 ```
 
-### 2. Basic Usage (One-Command Pipeline)
-Run the orchestrator to process your files:
+## Basic Usage
+
 ```bash
 python3 scripts/knowledge2skills_pipeline.py <file1> <file2> --name <skill-name> --install
 ```
 
-### 3. Advanced Commands & Flags
+## Common Flags
+
 | Flag | Description |
 | :--- | :--- |
-| `--graph` | Enable LightRAG Knowledge Graph construction. |
-| `--semantic` | Enable **Semantic Engineering** (Density scoring & SKU planning). |
-| `--viz` | Generate an interactive HTML visualization. |
-| `--dedup` | Run smart entity deduplication/merging. |
-| `--high-precision`| Use **MinerU** for complex PDF parsing. |
-| `--force` | Overwrite existing skills in the target directory. |
-| `--install` | Automatically register the skill to `~/.agents/skills/`. |
+| `--graph` | Build the LightRAG knowledge graph. |
+| `--semantic` | Run semantic engineering and density analysis. |
+| `--viz` | Generate interactive HTML graph visualization. |
+| `--dedup` | Run entity deduplication. |
+| `--high-precision` | Prefer MinerU for PDF extraction. |
+| `--install` | Install the generated skill to `~/.agents/skills/`. |
+| `--force` | Overwrite an existing installed skill. |
 
-#### Example: Build a Professional History Brain
+## Provider Configuration
+
+Cloud graph builds can use any OpenAI-compatible endpoint.
+
+Relevant environment variables:
+
 ```bash
-python3 scripts/knowledge2skills_pipeline.py vol1.epub vol2.pdf notes.md \
-    --name history-expert \
-    --graph \
-    --semantic \
-    --viz \
-    --dedup \
-    --high-precision \
-    --install
+export OPENAI_API_KEY=...
+export OPENAI_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
+export LIGHTRAG_LLM_MODEL=qwen-max
+export LIGHTRAG_EMBEDDING_MODEL=text-embedding-v4
 ```
 
----
+The same pattern works for other compatible providers as long as the endpoint and model names are valid.
 
-## 🎨 Domain Adaptation
+## MinerU Notes
 
-The pipeline automatically adjusts its extraction strategy based on the content domain:
-*   **Low Freedom**: Finance, Data Science (Mathematical precision, Python scripts).
-*   **Medium Freedom**: Career, Economics, Environment, Technology.
-*   **High Freedom**: Psychology, Philosophy, History, Complex Science (Systemic thinking, conceptual maps).
+For large scanned PDFs, local MinerU runs may take a long time.
 
----
+`knowledge2skills` now uses a configurable timeout:
 
-## ⚙️ Requirements & API
+```bash
+export KNOWLEDGE2SKILLS_MINERU_TIMEOUT=1800
+```
 
-- **OpenAI API**: Required if using cloud-based Graph RAG (`OPENAI_API_KEY`).
-- **Ollama**: If detected, the pipeline will offer to run RAG locally (0 cost).
-- **Hardware**: For high-precision MinerU parsing, 8GB+ RAM and 10GB+ Disk is recommended.
+Set it to `0` to disable the timeout entirely.
 
----
-
-## 📂 Project Structure
+## Project Structure
 
 ```text
 knowledge2skills/
-├── SKILL.md                # Skill definition template
+├── SKILL.md
+├── README.md
+├── README_CN.md
+├── CHANGELOG.md
+├── CHANGELOG_CN.md
 ├── scripts/
-│   ├── knowledge2skills_pipeline.py # The one-command orchestrator
-│   ├── extract_content.py           # Multi-format unified extractor
-│   ├── lightrag_graph.py            # Graph RAG integration
-│   ├── generate_skill.py            # Skill package producer
-│   ├── generate_visualization.py    # HTML graph builder
-│   └── entity_deduplicator.py       # Smart entity merger
+│   ├── knowledge2skills_pipeline.py
+│   ├── extract_content.py
+│   ├── lightrag_graph.py
+│   ├── query_graph.py
+│   ├── generate_skill.py
+│   ├── generate_visualization.py
+│   └── install_skill.py
 └── references/
-    ├── extraction_guide.md          # Domain strategies
-    └── api_reference.md             # Script API documentation
+    ├── extraction_guide.md
+    └── api_reference.md
 ```
 
----
+## Notes From Real-World Use
 
-## 👤 Author
+The March 21 production run surfaced two practical lessons:
+- graph quality depends heavily on domain-aware prompting and provider-compatible embedding handling
+- a successful graph build is not enough; installation, queryability, and visualization all need explicit verification
 
-**Leo Yuan Tsao**  
-GitHub: [@yuancafe](https://github.com/yuancafe)  
-*Specializing in AI-powered knowledge production and Agent architectures.*
+## License
 
----
-
-## 📄 License
-MIT License.
+MIT

@@ -2,7 +2,7 @@
 """
 Multi-format Content Extractor for knowledge2skills
 
-Supports: .pdf, .md, .txt, .docx, .epub, .mobi, .azw3, .json
+Supports: .pdf, .md, .txt, .docx, .epub, .mobi, .azw3, .json, .png, .jpg, .jpeg, .webp
 Can process a single file or a list of files.
 """
 
@@ -12,6 +12,8 @@ import re
 import argparse
 import sys
 import subprocess
+import base64
+import mimetypes
 from pathlib import Path
 
 # Optional dependency imports
@@ -42,9 +44,20 @@ try:
 except ImportError:
     mobi = None
 
+try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 # MinerU (Magic-PDF) support
 MAGIC_PDF_AVAILABLE = False
 LOCAL_MINERU_PYTHON = os.path.expanduser("~/.pyenv/versions/3.11.9/bin/python")
+MINERU_LOCAL_TIMEOUT_SECONDS = int(os.environ.get("KNOWLEDGE2SKILLS_MINERU_TIMEOUT", "1800"))
 
 try:
     from magic_pdf.pipe.UNIPipe import UNIPipe
@@ -157,7 +170,10 @@ def extract_with_mineru(path: Path, output_dir: Path) -> dict:
                 "-b", "pipeline",
                 "--device", "cpu"
             ]
-            subprocess.run(cmd, check=True, capture_output=True)
+            run_kwargs = {"check": True, "capture_output": True}
+            if MINERU_LOCAL_TIMEOUT_SECONDS > 0:
+                run_kwargs["timeout"] = MINERU_LOCAL_TIMEOUT_SECONDS
+            subprocess.run(cmd, **run_kwargs)
             parsed_dir = output_dir / path.stem
             md_files = list(parsed_dir.glob("*.md"))
             if md_files:
@@ -171,6 +187,11 @@ def extract_with_mineru(path: Path, output_dir: Path) -> dict:
                 # Record success
                 config["mineru_last_success"] = True
                 save_config(config)
+        except subprocess.TimeoutExpired:
+            print(
+                f"  Local MinerU CLI timed out after "
+                f"{MINERU_LOCAL_TIMEOUT_SECONDS}s. Falling back."
+            )
         except Exception as e:
             print(f"  Local MinerU CLI failed: {e}")
 
@@ -244,10 +265,15 @@ def extract_from_epub(path: Path) -> dict:
     for item in book.get_items():
         if item.get_type() == ebooklib.ITEM_DOCUMENT:
             soup = BeautifulSoup(item.get_content(), 'html.parser')
-            text = soup.get_text()
+            text = soup.get_text("\n")
+            text = re.sub(r'\n{3,}', '\n\n', text).strip()
+            if not text:
+                continue
             full_text += text + "\n\n"
             heading = soup.find(['h1', 'h2'])
             title = heading.get_text().strip() if heading else f"Chapter {len(sections)+1}"
+            if len(text) < 30 and title.lower().startswith("chapter"):
+                continue
             sections.append({"heading": title, "content": text, "level": 2})
 
     return {"sections": sections, "full_text": full_text, "tables": []}
@@ -263,13 +289,157 @@ def extract_from_mobi(path: Path) -> dict:
             return {"sections": [], "full_text": "Error: mobi library not installed", "tables": []}
 
     try:
-        tmp_dir, html_content = mobi.extract(str(path))
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(html_content, 'html.parser')
-        text = soup.get_text()
-        return {"sections": [{"heading": "Book Content", "content": text, "level": 2}], "full_text": text, "tables": []}
+        tmp_dir, extracted_path = mobi.extract(str(path))
+        extracted = Path(extracted_path)
+        if extracted.exists():
+            if extracted.suffix.lower() == ".epub":
+                return extract_from_epub(extracted)
+
+            raw = extracted.read_text(encoding="utf-8", errors="ignore")
+            if extracted.suffix.lower() in {".html", ".xhtml", ".htm"}:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(raw, 'html.parser')
+                text = soup.get_text("\n")
+            else:
+                text = raw
+            return {"sections": [{"heading": "Book Content", "content": text, "level": 2}], "full_text": text, "tables": []}
+
+        return {"sections": [], "full_text": f"Error parsing: extracted file not found at {extracted_path}", "tables": []}
     except Exception as e:
         return {"sections": [], "full_text": f"Error parsing: {e}", "tables": []}
+
+
+def _encode_image_for_api(path: Path, max_data_url_chars: int = 180000) -> str:
+    """Resize/compress an image so it fits NVIDIA/OpenAI-compatible data URL limits."""
+    mime_type, _ = mimetypes.guess_type(path.name)
+    mime_type = mime_type or "image/png"
+    raw = path.read_bytes()
+    data_url = f"data:{mime_type};base64,{base64.b64encode(raw).decode('ascii')}"
+    if len(data_url) <= max_data_url_chars:
+        return data_url
+
+    if not Image:
+        raise RuntimeError("Pillow is required to resize images for analysis")
+
+    with Image.open(path) as img:
+        img = img.convert("RGB")
+        quality = 70
+        max_side = 1600
+        while True:
+            resized = img.copy()
+            resized.thumbnail((max_side, max_side))
+            from io import BytesIO
+            buf = BytesIO()
+            resized.save(buf, format="JPEG", quality=quality, optimize=True)
+            payload = buf.getvalue()
+            data_url = f"data:image/jpeg;base64,{base64.b64encode(payload).decode('ascii')}"
+            if len(data_url) <= max_data_url_chars:
+                return data_url
+            if max_side <= 640 and quality <= 35:
+                break
+            if quality > 35:
+                quality -= 10
+            else:
+                max_side -= 160
+
+    raise RuntimeError(f"Image too large to analyze after compression: {path.name}")
+
+
+def _clean_image_analysis_text(text: str) -> str:
+    """Normalize repetitive image-analysis output from multimodal models."""
+    cleaned_lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("可见地名/文字："):
+            value = stripped.split("：", 1)[1]
+            parts = re.split(r"[，,、；;]\s*", value)
+            seen = []
+            for part in parts:
+                part = part.strip()
+                if not part or part in seen:
+                    continue
+                seen.append(part)
+            stripped = "可见地名/文字：" + "、".join(seen[:12])
+        cleaned_lines.append(stripped)
+    return "\n".join(cleaned_lines)
+
+
+def extract_from_image(path: Path) -> dict:
+    """Analyze standalone images such as maps so they become queryable references."""
+    metadata_lines = [f"File: {path.name}"]
+    if Image:
+        try:
+            with Image.open(path) as img:
+                metadata_lines.append(f"Dimensions: {img.width}x{img.height}")
+                metadata_lines.append(f"Mode: {img.mode}")
+        except Exception:
+            pass
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    base_url = (
+        os.environ.get("OPENAI_API_BASE")
+        or os.environ.get("OPENAI_BASE_URL")
+        or "https://integrate.api.nvidia.com/v1"
+    ).rstrip("/")
+    model = os.environ.get("IMAGE_ANALYSIS_MODEL", "meta/llama-3.2-90b-vision-instruct")
+
+    if not api_key or not requests:
+        content = "\n".join(metadata_lines + ["Analysis unavailable: missing OPENAI_API_KEY or requests package."])
+        return {
+            "sections": [{"heading": "Image Reference", "content": content, "level": 2}],
+            "full_text": content,
+            "tables": [],
+        }
+
+    data_url = _encode_image_for_api(path)
+    prompt = (
+        "请用中文输出一个紧凑的历史地图/图片说明，严格分成这5行：\n"
+        "1. 主题：\n"
+        "2. 范围：\n"
+        "3. 可见地名/文字：\n"
+        "4. 关键信息：\n"
+        "5. 与伯罗奔尼撒战争研究的关系：\n"
+        "要求：不要重复地名，最多列出12个可辨认的名称，不要编造看不清的细节。"
+    )
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                ],
+            }
+        ],
+        "temperature": 0.1,
+        "max_tokens": 260,
+    }
+
+    try:
+        resp = requests.post(
+            f"{base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=120,
+        )
+        resp.raise_for_status()
+        content = _clean_image_analysis_text(resp.json()["choices"][0]["message"]["content"].strip())
+    except Exception as e:
+        content = "\n".join(metadata_lines + [f"Analysis failed: {e}"])
+    else:
+        content = "\n".join(metadata_lines + ["", content])
+
+    return {
+        "sections": [{"heading": "Image Reference", "content": content, "level": 2}],
+        "full_text": content,
+        "tables": [],
+    }
 
 def extract_from_docx(path: Path) -> dict:
     """Extract content from DOCX."""
@@ -355,6 +525,7 @@ def process_files(paths: list, high_precision: bool = False, work_dir: Path = No
         elif ext == ".docx": res = extract_from_docx(path)
         elif ext == ".epub": res = extract_from_epub(path)
         elif ext in [".mobi", ".azw3"]: res = extract_from_mobi(path)
+        elif ext in [".png", ".jpg", ".jpeg", ".webp"]: res = extract_from_image(path)
         elif ext in [".txt", ".md", ".markdown"]: res = extract_from_text(path)
         elif ext == ".json":
             try:

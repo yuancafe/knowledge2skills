@@ -60,6 +60,8 @@ def install_skill(skill_dir: str, target_dir: str = None, force: bool = False) -
     target = Path(target_dir).resolve() if target_dir else DEFAULT_TARGET
     skill_name = skill_path.name
     dest = target / skill_name
+    backup_path = None
+    staging_path = target / f".{skill_name}_tmp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     # Validate
     errors = validate_skill(skill_path)
@@ -85,10 +87,21 @@ def install_skill(skill_dir: str, target_dir: str = None, force: bool = False) -
             shutil.move(str(dest), str(backup_path))
             print(f"Backed up existing skill to: {backup_path}", file=sys.stderr)
 
-    # Copy skill to target
-    shutil.copytree(str(skill_path), str(dest))
-    print(f"Installed skill '{skill_name}' to: {dest}", file=sys.stderr)
-    return True
+    try:
+        if staging_path.exists():
+            shutil.rmtree(staging_path)
+        shutil.copytree(str(skill_path), str(staging_path))
+        shutil.move(str(staging_path), str(dest))
+        print(f"Installed skill '{skill_name}' to: {dest}", file=sys.stderr)
+        return True
+    except Exception as exc:
+        if staging_path.exists():
+            shutil.rmtree(staging_path, ignore_errors=True)
+        if backup_path and backup_path.exists() and not dest.exists():
+            shutil.move(str(backup_path), str(dest))
+            print(f"Restored previous skill from backup after failure: {dest}", file=sys.stderr)
+        print(f"Installation failed: {exc}", file=sys.stderr)
+        return False
 
 
 def main():

@@ -17,29 +17,49 @@ from collections import Counter
 
 # Type inference keywords
 TYPE_KEYWORDS = {
-    "Character": ["character", "person", "narrator", "poet", "guide", "hero", "protagonist", "pilgrim", "soul", "shade", "spirit", "sinner"],
-    "Location": ["location", "place", "circle", "region", "realm", "river", "city", "mountain", "valley", "gate", "bridge", "pit", "heaven", "hell", "purgatory", "limbo", "paradise", "inferno"],
-    "Literary_Work": ["work", "book", "poem", "comedy", "canto", "text", "writing", "literature", "epic", "divine comedy"],
-    "Event": ["event", "journey", "descent", "encounter", "battle", "punishment", "transformation"],
-    "Creature": ["creature", "beast", "demon", "angel", "monster", "serpent", "dragon", "wolf", "lion", "leopard"],
-    "Concept": ["concept", "idea", "virtue", "sin", "love", "justice", "faith", "hope", "reason", "wisdom", "punishment"],
-    "Organization": ["organization", "group", "order", "church", "school", "faction"],
-    "Symbol": ["symbol", "represent", "signif", "metaphor", "allegory"],
-    "Mythological_Figure": ["god", "goddess", "mytholog", "greek", "roman", "trojan", "olymp"],
-    "Religious_Figure": ["saint", "biblical", "prophet", "apostle", "moses", "abraham", "noah", "christ", "mary", "angel"],
+    "Person": [
+        "person", "人物", "政治家", "将军", "统帅", "作家", "作者", "历史学家",
+        "国王", "统治者", "演说者", "哲学家", "领袖", "伯里克利", "修昔底德",
+    ],
+    "Place": [
+        "place", "location", "地点", "地名", "城邦", "城市", "地区", "海域", "岛",
+        "半岛", "港口", "河", "山", "雅典", "斯巴达", "阿提卡", "西西里",
+    ],
+    "Event": [
+        "event", "battle", "war", "campaign", "siege", "事件", "战役", "战争",
+        "远征", "围城", "起义", "政变", "冲突", "海战", "会战",
+    ],
+    "Organization": [
+        "organization", "group", "alliance", "league", "faction", "组织", "联盟",
+        "同盟", "派别", "军队", "舰队", "公民大会", "城邦集团",
+    ],
+    "Document": [
+        "document", "book", "text", "work", "writing", "著作", "史", "文献",
+        "论文", "译著", "演说词", "著", "《", "》",
+    ],
+    "Concept": [
+        "concept", "idea", "theory", "观念", "概念", "理论", "民主", "帝国",
+        "自由", "正义", "权力", "利益", "战略", "霸权", "恐惧",
+    ],
+    "Period": [
+        "period", "era", "century", "时代", "时期", "世纪", "古典时代",
+        "公元前", "战后时期",
+    ],
+    "Artifact": [
+        "artifact", "ship", "weapon", "map", "image", "器物", "战船", "舰船",
+        "武器", "地图", "图像", "陶器",
+    ],
 }
 
 TYPE_COLORS = {
-    "Character": "#ff6b6b",
-    "Location": "#4ecdc4",
-    "Literary_Work": "#ffe66d",
+    "Person": "#ff6b6b",
+    "Place": "#4ecdc4",
     "Event": "#a29bfe",
-    "Creature": "#fd79a8",
+    "Organization": "#ffe66d",
+    "Document": "#f5b041",
     "Concept": "#74b9ff",
-    "Organization": "#ffeaa7",
-    "Symbol": "#dfe6e9",
-    "Mythological_Figure": "#e17055",
-    "Religious_Figure": "#00b894",
+    "Period": "#55efc4",
+    "Artifact": "#fd79a8",
     "Other": "#636e72",
 }
 

@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.40] - 2026-03-21
+
+### Fixed
+- Fixed `.mobi` and `.azw3` extraction so the pipeline reads unpacked book content instead of treating the extracted path itself as content.
+- Fixed pipeline domain detection to call the async detector correctly instead of instantiating the wrong API shape.
+- Fixed OpenAI-compatible graph querying so embedding dimensions are loaded from the bundled graph DB rather than assuming OpenAI defaults.
+- Fixed historical graph visualization classification so non-literary corpora are not forced into literary-only node types.
+- Fixed installation rollback behavior so an existing installed skill can be restored if a staged overwrite fails.
+- Fixed repository hygiene by adding ignore rules for `.DS_Store`, `__pycache__`, and bytecode artifacts.
+
+### Added
+- Added standalone image and map ingestion for `.png`, `.jpg`, `.jpeg`, and `.webp` sources.
+- Added OpenAI-compatible provider support for LightRAG graph builds through configurable `OPENAI_API_BASE` / `OPENAI_BASE_URL`, custom chat models, and custom embedding models.
+- Added historical-domain extraction guardrails and examples for better graph quality on scholarly and historical corpora.
+- Added configurable local MinerU timeout via `KNOWLEDGE2SKILLS_MINERU_TIMEOUT`.
+- Added bilingual documentation refresh for README and changelog.
+
+### Changed
+- Updated project docs, skill metadata, and workflow guidance for the March 21 production hardening release.
+
 ## [1.3.0] - 2026-03-20
 ### Added
 - **Semantic Engineering Module**: New `scripts/semantic_engineering.py` for advanced knowledge density analysis.
