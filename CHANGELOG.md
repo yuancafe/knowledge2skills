@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1] - 2026-03-28
+
+### Added
+- Added structured JSON ingestion for `content_list` / `content_list_v2` style parser outputs.
+- Added typed section expansion for heading, text, table, equation, and image blocks from structured JSON sources.
+- Added page and section-path preservation when converting structured JSON blocks into sections.
+
+### Changed
+- Changed `.json` handling from raw `json.dumps(...)` fallback to parser-aware extraction when a structured content list is detected.
+- Updated README, README_CN, and skill metadata for the March 28 quality-focused release.
+
 ## [1.40] - 2026-03-21
 
 ### Fixed

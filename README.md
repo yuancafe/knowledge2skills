@@ -7,8 +7,8 @@ Industrial-grade knowledge production for AI agents.
 
 Author: Leo Yuan Tsao
 
-Version: `1.40`
-Updated: `2026-03-21`
+Version: `1.4.1`
+Updated: `2026-03-28`
 
 English | [中文](README_CN.md)
 
@@ -25,11 +25,18 @@ It is designed for:
 - multilingual corpora
 - downstream agent use via generated `SKILL.md`
 
-## What Changed In 1.40
+## What Changed In 1.4.1
 
-Version `1.40` is the March 21 stabilization release driven by a full end-to-end production run on a difficult historical corpus.
+Version `1.4.1` is the March 28 quality-upgrade release focused on improving how structured multimodal parsing results are turned into usable skill knowledge.
 
-It specifically hardens the workflow in the places that failed in real use:
+It improves output quality in the places where structured parsing used to lose signal:
+- added native structured JSON ingestion for `content_list` / `content_list_v2` style outputs from MinerU and similar pipelines
+- converts text, headings, tables, equations, and image blocks into typed sections instead of flattening the whole JSON file into one raw blob
+- preserves page and section-path hints so downstream graph extraction gets cleaner context
+- keeps table blocks separately available in extraction results
+- retains the 1.40 provider-compatibility, graph hardening, and safer install improvements
+
+It also keeps the production hardening added in `1.40`:
 - fixed `.mobi` and `.azw3` extraction so extracted content is read from the unpacked file instead of treating a temporary path as content
 - added standalone image and map ingestion so `.jpg`, `.png`, `.jpeg`, and `.webp` files can become queryable references
 - fixed async domain detection wiring inside the pipeline
@@ -42,7 +49,7 @@ It specifically hardens the workflow in the places that failed in real use:
 
 ## Key Features
 
-- Multi-format extraction: PDF, MD, TXT, DOCX, EPUB, MOBI, AZW3, JSON, and standalone images
+- Multi-format extraction: PDF, MD, TXT, DOCX, EPUB, MOBI, AZW3, structured JSON, and standalone images
 - Graph-enhanced synthesis via LightRAG
 - Semantic engineering for logic, entity, and structure density
 - Interactive graph visualization bundled into each generated skill
@@ -91,6 +98,16 @@ export LIGHTRAG_EMBEDDING_MODEL=text-embedding-v4
 
 The same pattern works for other compatible providers as long as the endpoint and model names are valid.
 
+## Structured JSON Support
+
+`knowledge2skills` now recognizes structured parser outputs such as `content_list.json` and `content_list_v2.json`.
+
+Instead of storing the whole JSON payload as a string, it now:
+- expands typed blocks into sections
+- preserves page hints and section paths
+- keeps tables separate from plain text when possible
+- carries image, equation, and heading blocks into the generated references
+
 ## MinerU Notes
 
 For large scanned PDFs, local MinerU runs may take a long time.
@@ -127,7 +144,7 @@ knowledge2skills/
 
 ## Notes From Real-World Use
 
-The March 21 production run surfaced two practical lessons:
+The March 21 production run and March 28 structured-ingestion upgrade surfaced two practical lessons:
 - graph quality depends heavily on domain-aware prompting and provider-compatible embedding handling
 - a successful graph build is not enough; installation, queryability, and visualization all need explicit verification
 

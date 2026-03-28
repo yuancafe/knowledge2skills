@@ -485,6 +485,235 @@ def extract_from_text(path: Path) -> dict:
         
     return {"sections": sections, "full_text": text, "tables": []}
 
+
+def _coerce_text_chunks(value) -> list[str]:
+    """Collect readable text fragments from nested JSON values."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else []
+    if isinstance(value, (int, float, bool)):
+        return [str(value)]
+    if isinstance(value, list):
+        chunks = []
+        for item in value:
+            chunks.extend(_coerce_text_chunks(item))
+        return chunks
+    if isinstance(value, dict):
+        chunks = []
+        for key in [
+            "text",
+            "content",
+            "body",
+            "caption",
+            "table_caption",
+            "img_caption",
+            "image_caption",
+            "latex",
+            "html",
+            "markdown",
+            "md",
+            "footnote",
+            "ocr_text",
+        ]:
+            if key in value:
+                chunks.extend(_coerce_text_chunks(value.get(key)))
+        return chunks
+    return []
+
+
+def _normalize_block_type(raw_type: str) -> str:
+    value = (raw_type or "block").strip().lower().replace("-", "_")
+    alias_map = {
+        "image": "image",
+        "img": "image",
+        "figure": "image",
+        "picture": "image",
+        "table": "table",
+        "form": "table",
+        "equation": "equation",
+        "formula": "equation",
+        "latex": "equation",
+        "text": "text",
+        "paragraph": "text",
+        "title": "heading",
+        "heading": "heading",
+        "header": "heading",
+        "list": "list",
+    }
+    return alias_map.get(value, value)
+
+
+def _find_structured_items(payload):
+    """Return a likely content-list array from MinerU/RAG-style JSON."""
+    if isinstance(payload, list):
+        return payload
+    if not isinstance(payload, dict):
+        return None
+
+    for key in ["content_list_v2", "content_list", "items", "data", "blocks"]:
+        value = payload.get(key)
+        if isinstance(value, list):
+            return value
+
+    for value in payload.values():
+        if isinstance(value, list) and value and all(isinstance(item, dict) for item in value):
+            return value
+
+    return None
+
+
+def _build_section_path(item: dict) -> str:
+    path_keys = [
+        "section_path",
+        "section_title",
+        "chapter_title",
+        "parent_title",
+        "doc_title",
+    ]
+    path_parts = []
+    for key in path_keys:
+        value = item.get(key)
+        if isinstance(value, list):
+            path_parts.extend(_coerce_text_chunks(value))
+        else:
+            path_parts.extend(_coerce_text_chunks(value))
+    deduped = []
+    for part in path_parts:
+        if part not in deduped:
+            deduped.append(part)
+    return " > ".join(deduped[:6])
+
+
+def _render_structured_item(item: dict, block_index: int) -> tuple[str, str]:
+    """Render a content-list item into a heading/content pair."""
+    block_type = _normalize_block_type(
+        item.get("type") or item.get("category") or item.get("block_type") or "block"
+    )
+    page = item.get("page_idx") or item.get("page") or item.get("page_no") or item.get("page_num")
+    section_path = _build_section_path(item)
+
+    candidate_text = []
+    for key in [
+        "text",
+        "content",
+        "body",
+        "md",
+        "markdown",
+        "latex",
+        "caption",
+        "table_caption",
+        "img_caption",
+        "image_caption",
+        "html",
+        "footnote",
+        "ocr_text",
+        "table_body",
+        "table_markdown",
+        "table_html",
+    ]:
+        candidate_text.extend(_coerce_text_chunks(item.get(key)))
+
+    if not candidate_text and "table" in block_type:
+        rows = item.get("table") or item.get("data") or item.get("cells")
+        candidate_text.extend(_coerce_text_chunks(rows))
+
+    if not candidate_text:
+        return "", ""
+
+    content_lines = [f"Block Type: {block_type}"]
+    if page not in [None, ""]:
+        content_lines.append(f"Page: {page}")
+    if section_path:
+        content_lines.append(f"Section Path: {section_path}")
+
+    content_lines.append("")
+    content_lines.extend(candidate_text)
+
+    title_text = ""
+    if block_type == "heading":
+        title_text = candidate_text[0][:80]
+    elif section_path:
+        title_text = section_path.split(" > ")[-1][:80]
+
+    if not title_text:
+        title_text = f"{block_type.replace('_', ' ').title()} Block {block_index + 1}"
+
+    content = "\n".join(line for line in content_lines if line is not None).strip()
+    return title_text, content
+
+
+def extract_from_json(path: Path) -> dict:
+    """Extract from raw JSON or structured content-list JSON."""
+    try:
+        raw_data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"sections": [], "full_text": "", "tables": []}
+
+    structured_items = _find_structured_items(raw_data)
+    if structured_items:
+        sections = []
+        full_text_parts = []
+        tables = []
+
+        for index, item in enumerate(structured_items):
+            if not isinstance(item, dict):
+                continue
+            heading, content = _render_structured_item(item, index)
+            if not content:
+                continue
+            block_type = _normalize_block_type(
+                item.get("type") or item.get("category") or item.get("block_type") or "block"
+            )
+            sections.append(
+                {
+                    "heading": heading,
+                    "content": content,
+                    "level": 2,
+                    "block_type": block_type,
+                }
+            )
+            full_text_parts.append(content)
+            if block_type == "table":
+                table_payload = (
+                    item.get("table")
+                    or item.get("data")
+                    or item.get("cells")
+                    or item.get("table_body")
+                    or item.get("table_markdown")
+                    or item.get("table_html")
+                )
+                tables.append(
+                    {
+                        "page": item.get("page_idx") or item.get("page") or item.get("page_no"),
+                        "data": table_payload,
+                    }
+                )
+
+        if sections:
+            return {
+                "sections": sections,
+                "full_text": "\n\n".join(full_text_parts),
+                "tables": tables,
+            }
+
+    if isinstance(raw_data, dict):
+        summary_lines = [f"{key}: {json.dumps(value, ensure_ascii=False)}" for key, value in raw_data.items()]
+        summary_text = "\n".join(summary_lines)
+        return {
+            "sections": [{"heading": "JSON Content", "content": summary_text, "level": 2}],
+            "full_text": summary_text,
+            "tables": [],
+        }
+
+    text = json.dumps(raw_data, ensure_ascii=False, indent=2)
+    return {
+        "sections": [{"heading": "JSON Content", "content": text, "level": 2}],
+        "full_text": text,
+        "tables": [],
+    }
+
 def process_files(paths: list, high_precision: bool = False, work_dir: Path = None) -> dict:
     """Process multiple files into a single unified extraction."""
     combined = {
@@ -527,11 +756,7 @@ def process_files(paths: list, high_precision: bool = False, work_dir: Path = No
         elif ext in [".mobi", ".azw3"]: res = extract_from_mobi(path)
         elif ext in [".png", ".jpg", ".jpeg", ".webp"]: res = extract_from_image(path)
         elif ext in [".txt", ".md", ".markdown"]: res = extract_from_text(path)
-        elif ext == ".json":
-            try:
-                raw_data = json.loads(path.read_text())
-                res = {"sections": [], "full_text": json.dumps(raw_data), "tables": []}
-            except: res = {"sections": [], "full_text": "", "tables": []}
+        elif ext == ".json": res = extract_from_json(path)
         else: continue
         
         for s in res.get("sections", []):

@@ -3,7 +3,7 @@ name: knowledge2skills
 description: Transform any source material (PDF, MD, TXT, DOCX, EPUB, MOBI, AZW3, JSON, images) into structured, executable AI skill packages. Specializes in Knowledge Production using LightRAG for graph-enhanced precision, OpenAI-compatible providers, and bundled graph databases. "knowledge2skills", "docs2skills", "ebooks2skills", "把这些文档变成技能", "知识生产流水线".
 ---
 
-# knowledge2skills — Advanced Knowledge Production Pipeline (v1.40)
+# knowledge2skills — Advanced Knowledge Production Pipeline (v1.4.1)
 
 
 ## Overview
@@ -13,15 +13,16 @@ description: Transform any source material (PDF, MD, TXT, DOCX, EPUB, MOBI, AZW3
 ## Core Capabilities
 
 1.  **Multi-format Extraction**: Seamlessly processes `.pdf`, `.md`, `.txt`, `.docx`, `.epub`, `.mobi`, `.azw3`, `.json`, and standalone images/maps.
-2.  **Cross-lingual Synthesis**: Built-in support for mixed-language inputs (Chinese, English, Italian, etc.). It creates unified knowledge structures where concepts across different languages are mapped and linked.
-3.  **Batch Synthesis**: Combines multiple files (e.g., a series of history books) into a single unified skill with source-aware sectioning.
-4.  **OpenAI-Compatible Graph Construction**: Supports OpenAI-compatible endpoints through configurable `OPENAI_API_BASE` / `OPENAI_BASE_URL`, including providers such as OpenAI, NVIDIA-compatible endpoints, DashScope, and other compatible gateways.
-5.  **Domain-Adaptive Graph RAG**: Integrates advanced logic from `rag-builder` to automatically detect document domains and apply optimized entity types (e.g., Medical, Legal, Business). It learns and updates these types over time.
-6.  **Smart Entity Deduplication**: Automatically merges similar entities (e.g., "Dante" + "Dante Alighieri") during graph construction to ensure a clean and accurate knowledge base.
-7.  **Interactive Graph Visualization**: Generates a self-contained, web-based interactive graph explorer bundled within the skill (`references/visualization/index.html`).
-8.  **Auto-Configuration & Setup**: Scans the environment for LightRAG and necessary keys. If missing, it provides interactive installation and configuration prompts.
-9.  **Bundled Graph DB**: If built, the LightRAG database is bundled into the skill package (`references/graph_db/`) for high-fidelity secondary retrieval.
-10.  **Historical-Domain Hardening**: Graph extraction can bias toward grounded historical entities and relationships when the source material is historical or scholarly.
+2.  **Structured JSON Ingestion**: Expands parser outputs such as `content_list.json` into typed sections for text, tables, equations, images, and headings instead of flattening them into one raw blob.
+3.  **Cross-lingual Synthesis**: Built-in support for mixed-language inputs (Chinese, English, Italian, etc.). It creates unified knowledge structures where concepts across different languages are mapped and linked.
+4.  **Batch Synthesis**: Combines multiple files (e.g., a series of history books) into a single unified skill with source-aware sectioning.
+5.  **OpenAI-Compatible Graph Construction**: Supports OpenAI-compatible endpoints through configurable `OPENAI_API_BASE` / `OPENAI_BASE_URL`, including providers such as OpenAI, NVIDIA-compatible endpoints, DashScope, and other compatible gateways.
+6.  **Domain-Adaptive Graph RAG**: Integrates advanced logic from `rag-builder` to automatically detect document domains and apply optimized entity types (e.g., Medical, Legal, Business). It learns and updates these types over time.
+7.  **Smart Entity Deduplication**: Automatically merges similar entities (e.g., "Dante" + "Dante Alighieri") during graph construction to ensure a clean and accurate knowledge base.
+8.  **Interactive Graph Visualization**: Generates a self-contained, web-based interactive graph explorer bundled within the skill (`references/visualization/index.html`).
+9.  **Auto-Configuration & Setup**: Scans the environment for LightRAG and necessary keys. If missing, it provides interactive installation and configuration prompts.
+10.  **Bundled Graph DB**: If built, the LightRAG database is bundled into the skill package (`references/graph_db/`) for high-fidelity secondary retrieval.
+11.  **Historical-Domain Hardening**: Graph extraction can bias toward grounded historical entities and relationships when the source material is historical or scholarly.
 
 ## Workflow
 

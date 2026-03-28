@@ -7,8 +7,8 @@
 
 作者：Leo Yuan Tsao
 
-版本：`1.40`
-更新时间：`2026-03-21`
+版本：`1.4.1`
+更新时间：`2026-03-28`
 
 [English](README.md) | 中文
 
@@ -25,11 +25,17 @@
 - 多语种语料处理
 - 面向 Agent 的 `SKILL.md` 自动生成
 
-## 1.40 做了什么
+## 1.4.1 做了什么
 
-`1.40` 是一次基于真实生产调用结果做出来的稳定化版本，发布日期为 `2026-03-21`。
+`1.4.1` 是一次面向产出质量的升级版本，发布日期为 `2026-03-28`，重点是把结构化多模态解析结果真正变成可用知识，而不是把它们压扁成一整段 JSON 文本。
 
-这一版主要修掉了实际使用中暴露出来的问题：
+这一版新增的核心能力是：
+- 原生识别 `content_list` / `content_list_v2` 这类结构化 JSON 解析结果
+- 把文本、标题、表格、公式、图片块展开成带类型的 sections，而不是整份 JSON 直接 `json.dumps`
+- 保留页码和章节路径提示，让后续图谱抽取拿到更干净的上下文
+- 尽可能把表格块单独保留下来，避免和普通正文混在一起
+
+同时保留 `1.40` 中已经验证有效的稳定化修复：
 - 修复 `.mobi` / `.azw3` 提取逻辑，改为读取解包后的真实正文，而不是把临时路径当内容
 - 新增独立图片 / 地图输入支持，使 `.jpg`、`.png`、`.jpeg`、`.webp` 能进入可查询语料
 - 修复流水线里领域检测的异步调用接线问题
@@ -42,7 +48,7 @@
 
 ## 核心能力
 
-- 多格式提取：PDF、MD、TXT、DOCX、EPUB、MOBI、AZW3、JSON、独立图片
+- 多格式提取：PDF、MD、TXT、DOCX、EPUB、MOBI、AZW3、结构化 JSON、独立图片
 - 基于 LightRAG 的图谱增强合成
 - 面向逻辑、实体、结构密度的语义工程
 - 每个技能内置交互式图谱可视化
@@ -88,6 +94,16 @@ export OPENAI_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
 export LIGHTRAG_LLM_MODEL=qwen-max
 export LIGHTRAG_EMBEDDING_MODEL=text-embedding-v4
 ```
+
+## 结构化 JSON 支持
+
+`knowledge2skills` 现在会识别 `content_list.json`、`content_list_v2.json` 这类结构化解析结果。
+
+处理方式不再是简单把整份 JSON 序列化成字符串，而是：
+- 按 block type 展开成 sections
+- 保留页码和章节路径
+- 尽量把表格与普通文本分开
+- 把图片、公式、标题块也纳入最终 references
 
 只要端点与模型名有效，同样的方式也可用于其他兼容提供方。
 
